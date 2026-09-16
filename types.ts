@@ -125,9 +125,33 @@ export interface GraduateProfileItem {
   icon: string;
 }
 
+export interface AboutData {
+  visi: string;
+  misi: string[];
+  history: string;
+  struktur: {
+    pimpinan: string;
+    nama: string;
+    staff: Array<{ role: string; name: string }>;
+  };
+}
+
+export interface SlideItemData {
+  image: string;
+  title: string;
+  subtitle: string;
+}
+
+export interface StatItemData {
+  label: string;
+  value: string;
+}
+
 export interface HomeData {
   news: NewsItem[];
   projects: ProjectItem[];
   journals: JournalItem[];
   facilities: Facility[];
+  stats?: StatItemData[];
+  slides?: SlideItemData[];
 }

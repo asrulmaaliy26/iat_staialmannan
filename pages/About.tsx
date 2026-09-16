@@ -23,16 +23,35 @@ import {
   GRADUATE_PROFILES,
   DOMAIN_LINKS
 } from '../constants';
+import { fetchAboutData } from '../services/api';
+import { AboutData } from '../types';
 
 const About: React.FC = () => {
   const { section } = useParams<{ section?: string }>();
   const [activeTab, setActiveTab] = useState<string>('visi-misi');
+  const [aboutData, setAboutData] = useState<AboutData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     if (section) {
       setActiveTab(section);
     }
   }, [section]);
+
+  useEffect(() => {
+    const loadAbout = async () => {
+      setLoading(true);
+      try {
+        const data = await fetchAboutData('KAMPUS', 'Ushuluddin', 'IAT');
+        setAboutData(data);
+      } catch (err) {
+        console.error('Error fetching about data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadAbout();
+  }, []);
 
   const tabs = [
     { id: 'visi-misi', name: 'Visi, Misi & Tujuan', icon: Compass },
@@ -103,7 +122,7 @@ const About: React.FC = () => {
               </div>
 
               <blockquote className="bg-gradient-to-r from-emerald-50 to-teal-50/50 p-6 sm:p-8 rounded-2xl border-l-4 border-emerald-600 text-emerald-950 font-bold text-base sm:text-lg leading-relaxed italic">
-                "{import.meta.env.VITE_ABOUT_VISI || 'Menjadi Program Studi Ilmu Al-Qur\'an dan Tafsir yang Unggul, Berakar pada Turats Islamiyah, dan Berdaya Saing Global dalam Pengembangan Keilmuan Al-Qur\'an serta Pemberdayaan Masyarakat pada Tahun 2030.'}"
+                "{aboutData?.visi || import.meta.env.VITE_ABOUT_VISI || 'Menjadi Program Studi Ilmu Al-Qur\'an dan Tafsir yang Unggul, Berakar pada Turats Islamiyah, dan Berdaya Saing Global dalam Pengembangan Keilmuan Al-Qur\'an serta Pemberdayaan Masyarakat pada Tahun 2030.'}"
               </blockquote>
             </div>
 
@@ -120,12 +139,12 @@ const About: React.FC = () => {
               </div>
 
               <div className="space-y-4">
-                {[
+                {(aboutData?.misi || [
                   "Menyelenggarakan pendidikan dan pengajaran Ilmu Al-Qur'an dan Tafsir berkualitas tinggi berbasis integrasi turats dan metodologi riset modern.",
                   "Mengembangkan riset inovatif dalam bidang studi naskah tafsir nusantara, living Qur'an, hermeneutika, dan digital quranic studies.",
                   "Melaksanakan pengabdian kepada masyarakat melalui pembinaan tahfidz, dakwah Al-Qur'an moderat (wasathiyah), dan literasi keislaman.",
                   "Menjalin kemitraan strategis nasional dan internasional dengan perguruan tinggi Islam, ma'had aly, pusat riset Al-Qur'an, dan lembaga dakwah."
-                ].map((misi, idx) => (
+                ]).map((misi, idx) => (
                   <div key={idx} className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
                     <span className="w-7 h-7 rounded-xl bg-emerald-800 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
                       {idx + 1}
@@ -211,10 +230,7 @@ const About: React.FC = () => {
               <div className="pt-6 border-t border-slate-100 space-y-4">
                 <h3 className="text-lg font-black text-slate-900">Sejarah & Latar Belakang Pendirian</h3>
                 <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
-                  Program Studi Ilmu Al-Qur'an dan Tafsir (IAT) didirikan di bawah naungan Fakultas Ushuluddin STAI Al-Mannan untuk menjawab kebutuhan umat akan lahirnya generasi yang memahami Al-Qur'an secara mendalam, moderat, dan berintelektual tinggi.
-                </p>
-                <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
-                  Dengan memadukan tradisi keilmuan pesantren melalui pengajian kitab kuning klasik (turats) dengan tradisi riset akademik perguruan tinggi modern, IAT STAI Al-Mannan terus berkembang menjadi pusat studi Al-Qur'an yang diperhitungkan di tingkat regional maupun nasional.
+                  {aboutData?.history || import.meta.env.VITE_ABOUT_HISTORY || "Program Studi Ilmu Al-Qur'an dan Tafsir (IAT) didirikan di bawah naungan Fakultas Ushuluddin STAI Al-Mannan untuk menjawab kebutuhan umat akan lahirnya generasi yang memahami Al-Qur'an secara mendalam, moderat, dan berintelektual tinggi."}
                 </p>
               </div>
             </div>

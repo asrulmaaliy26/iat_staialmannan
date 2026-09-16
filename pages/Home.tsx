@@ -24,12 +24,15 @@ import FacilityModal from '../components/FacilityModal';
 import {
   fetchNews,
   fetchBestJournals,
-  fetchFacilities
+  fetchFacilities,
+  fetchHomeSlides,
+  fetchHomeStats
 } from '../services/api';
 import {
   NewsItem,
   JournalItem,
-  Facility
+  Facility,
+  StatItemData
 } from '../types';
 import {
   PRODI_NAME,
@@ -43,6 +46,7 @@ import {
 
 const Home: React.FC = () => {
   const [slides, setSlides] = useState<SlideItem[]>([]);
+  const [statsData, setStatsData] = useState<StatItemData[]>([]);
   const [newsList, setNewsList] = useState<NewsItem[]>([]);
   const [bestJournals, setBestJournals] = useState<JournalItem[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
@@ -50,30 +54,18 @@ const Home: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Parse slides from ENV
-    try {
-      const envSlides = import.meta.env.VITE_HOME_SLIDES;
-      if (envSlides) {
-        setSlides(JSON.parse(envSlides));
-      }
-    } catch {
-      setSlides([
-        {
-          image: '/gedungdepan.jpg',
-          title: "Program Studi Ilmu Al-Qur'an & Tafsir",
-          subtitle: "Mencetak Mufassir Muda Berakhlak Qurani, Kritis, dan Berwawasan Global"
-        }
-      ]);
-    }
-
     const loadData = async () => {
       setIsLoading(true);
       try {
-        const [newsData, journalData, facilityData] = await Promise.all([
+        const [slidesData, statsResult, newsData, journalData, facilityData] = await Promise.all([
+          fetchHomeSlides(),
+          fetchHomeStats(),
           fetchNews('Ushuluddin', 'IAT'),
           fetchBestJournals('Ushuluddin', 'IAT'),
           fetchFacilities('Ushuluddin', 'IAT')
         ]);
+        setSlides(slidesData);
+        setStatsData(statsResult);
         setNewsList(newsData.slice(0, 3));
         setBestJournals(journalData.slice(0, 2));
         setFacilities(facilityData.slice(0, 4));
@@ -87,12 +79,19 @@ const Home: React.FC = () => {
     loadData();
   }, []);
 
-  const stats = [
-    { label: "Mahasiswa Aktif", value: "350+", icon: Users },
-    { label: "Dosen Ahli & Mufassir", value: "24", icon: GraduationCap },
-    { label: "Hafizh/Hafizhah 30 Juz", value: "85%", icon: BookOpen },
-    { label: "Alumni Berdaya Saing", value: "1.200+", icon: Award }
-  ];
+  const statIcons = [Users, GraduationCap, BookOpen, Award];
+  const stats = statsData.length > 0
+    ? statsData.map((s, idx) => ({
+        label: s.label,
+        value: s.value,
+        icon: statIcons[idx % statIcons.length]
+      }))
+    : [
+        { label: "Mahasiswa Aktif", value: "350+", icon: Users },
+        { label: "Dosen Ahli & Mufassir", value: "24", icon: GraduationCap },
+        { label: "Hafizh/Hafizhah 30 Juz", value: "85%", icon: BookOpen },
+        { label: "Alumni Berdaya Saing", value: "1.200+", icon: Award }
+      ];
 
   const getPillarIcon = (name: string) => {
     switch (name) {

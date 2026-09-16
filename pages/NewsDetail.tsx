@@ -2,14 +2,85 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { fetchNewsDetail, fetchNews, incrementNewsViews } from '../services/api';
 import { NewsItem } from '../types';
-import { ArrowLeft, Calendar, Eye, ZoomIn, X, User, Share2, BookOpen } from 'lucide-react';
+import { ArrowLeft, Calendar, Eye, ZoomIn, X, User, Share2, Clock } from 'lucide-react';
 import 'react-quill-new/dist/quill.snow.css';
+
+// Helper to format date and time in Indonesian locale with hours, minutes, seconds
+const formatNewsDateTime = (dateStr?: string, createdAtStr?: string) => {
+  if (!dateStr && !createdAtStr) {
+    return {
+      dateText: '-',
+      timeText: '00:00:00 WIB',
+      fullText: '-'
+    };
+  }
+
+  let dateObj: Date = new Date();
+  const d = dateStr ? new Date(dateStr) : null;
+  const c = createdAtStr ? new Date(createdAtStr) : null;
+
+  if (c && !isNaN(c.getTime()) && (c.getHours() !== 0 || c.getMinutes() !== 0 || c.getSeconds() !== 0)) {
+    if (d && !isNaN(d.getTime())) {
+      dateObj = new Date(d.getFullYear(), d.getMonth(), d.getDate(), c.getHours(), c.getMinutes(), c.getSeconds());
+    } else {
+      dateObj = c;
+    }
+  } else if (d && !isNaN(d.getTime())) {
+    dateObj = d;
+  } else if (c && !isNaN(c.getTime())) {
+    dateObj = c;
+  }
+
+  try {
+    const dateText = dateObj.toLocaleDateString('id-ID', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    const timeText = dateObj.toLocaleTimeString('id-ID', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }).replace(/\./g, ':') + ' WIB';
+
+    return {
+      dateText,
+      timeText,
+      fullText: `${dateText} • ${timeText}`
+    };
+  } catch {
+    return {
+      dateText: dateStr || '-',
+      timeText: '00:00:00 WIB',
+      fullText: dateStr || '-'
+    };
+  }
+};
+
+const formatShortDate = (dateStr?: string) => {
+  if (!dateStr) return '-';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  } catch {
+    return dateStr;
+  }
+};
 
 const NewsDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [news, setNews] = useState<NewsItem | null>(null);
   const [relatedNews, setRelatedNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [imgLoaded, setImgLoaded] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [error, setError] = useState(false);
 
@@ -81,6 +152,8 @@ const NewsDetail: React.FC = () => {
     );
   }
 
+  const dateTimeInfo = formatNewsDateTime(news.date, news.created_at);
+
   return (
     <div className="bg-slate-50 min-h-screen py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -104,40 +177,74 @@ const NewsDetail: React.FC = () => {
           {/* Main Article */}
           <div className="lg:col-span-8 space-y-8">
             <article className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-100 shadow-sm space-y-6">
-              {/* Header Tags */}
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <span className="bg-emerald-900/90 text-emerald-200 border border-emerald-700/50 px-3.5 py-1 rounded-full text-xs font-bold shadow-sm">
-                    {news.category || 'Kajian IAT'}
-                  </span>
-                  <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-semibold">
-                    Fakultas Ushuluddin
-                  </span>
+              {/* 1. Header Tags (Kategori & Jenjang di paling atas sebelum judul) */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="bg-emerald-900/90 text-emerald-200 border border-emerald-700/50 px-3.5 py-1 rounded-full text-xs font-bold shadow-sm">
+                  {news.category || 'Kajian IAT'}
+                </span>
+                <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-semibold">
+                  Fakultas Ushuluddin
+                </span>
+              </div>
+
+              {/* 2. Judul Berita (Di atas gambar) */}
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 leading-tight">
+                {news.title}
+              </h1>
+
+              {/* 3. Tanggal & Jam Upload (Kecil di atas gambar) */}
+              <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-xs sm:text-sm text-slate-500 font-medium pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-1.5 text-slate-600">
+                  <Calendar className="w-4 h-4 text-amber-500" />
+                  <span>{dateTimeInfo.dateText}</span>
                 </div>
-
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 leading-tight">
-                  {news.title}
-                </h1>
-
-                <div className="flex items-center gap-4 text-xs text-slate-400 font-medium pt-2 border-t border-slate-100">
-                  <span className="flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-amber-500" /> {news.date}
-                  </span>
-                  <span>•</span>
-                  <span className="flex items-center gap-1.5">
-                    <Eye className="w-3.5 h-3.5 text-emerald-600" /> {(news.views || 0).toLocaleString()} pembaca
-                  </span>
+                <span className="hidden sm:inline text-slate-300">•</span>
+                <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-lg text-slate-700 font-semibold text-xs border border-slate-200">
+                  <Clock className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>{dateTimeInfo.timeText}</span>
+                </div>
+                <span className="hidden sm:inline text-slate-300">•</span>
+                <div className="flex items-center gap-1.5 text-slate-500">
+                  <User className="w-4 h-4 text-slate-400" />
+                  <span>Redaksi IAT</span>
                 </div>
               </div>
 
-              {/* Main Image */}
-              <div className="relative rounded-2xl overflow-hidden aspect-video bg-slate-900">
+              {/* 4. Main Image Container (Dokumentasi jelas tanpa ketutupan, views di dalam gambar) */}
+              <div 
+                className="relative rounded-2xl overflow-hidden aspect-video bg-slate-900 shadow-md group cursor-pointer"
+                onClick={() => setSelectedImage(news.main_image || '/gedungdepan.jpg')}
+              >
+                {!imgLoaded && (
+                  <div className="absolute inset-0 bg-slate-200 animate-pulse flex items-center justify-center z-10">
+                    <div className="w-10 h-10 border-4 border-slate-300 border-t-emerald-700 rounded-full animate-spin"></div>
+                  </div>
+                )}
                 <img
                   src={news.main_image || '/gedungdepan.jpg'}
                   alt={news.title}
-                  className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-500"
-                  onClick={() => setSelectedImage(news.main_image)}
+                  className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-500 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+                  onLoad={() => setImgLoaded(true)}
                 />
+
+                {/* Ambient overlay */}
+                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors pointer-events-none"></div>
+
+                {/* Floating Views Badge inside image */}
+                <div className="absolute top-4 right-4 z-20 pointer-events-none">
+                  <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md text-white text-xs sm:text-sm font-bold px-3.5 py-1.5 rounded-full border border-white/20 shadow-lg">
+                    <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>{news.views || 0} Dilihat</span>
+                  </div>
+                </div>
+
+                {/* Zoom hover indicator */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="bg-black/50 backdrop-blur-md p-3 rounded-full opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition-all duration-300 border border-white/30 hidden md:flex items-center gap-2 text-white text-xs font-semibold px-4 shadow-xl">
+                    <ZoomIn className="text-white w-4 h-4" />
+                    <span>Klik untuk memperbesar</span>
+                  </div>
+                </div>
               </div>
 
               {/* Article Content */}
@@ -155,7 +262,10 @@ const NewsDetail: React.FC = () => {
                   dangerouslySetInnerHTML={{
                     __html: (news.content || '')
                       .replace(/&nbsp;/g, ' ')
+                      .replace(/\u00A0/g, ' ')
                       .replace(/\n/g, '</p><p>')
+                      .replace(/<p><\/p>/g, '<p><br></p>')
+                      .replace(/<p>\s*<\/p>/g, '<p><br></p>')
                   }}
                 />
               </div>
@@ -206,18 +316,23 @@ const NewsDetail: React.FC = () => {
                   <Link
                     to={`/berita/${item.id}`}
                     key={item.id}
-                    className="flex items-start gap-3.5 group"
+                    className="flex items-start gap-3.5 group p-2 rounded-2xl hover:bg-slate-50 transition-colors"
                   >
-                    <img
-                      src={item.main_image}
-                      alt={item.title}
-                      className="w-16 h-16 rounded-xl object-cover flex-shrink-0 group-hover:scale-105 transition-transform"
-                    />
-                    <div className="space-y-1">
+                    <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-200 flex-shrink-0">
+                      <img
+                        src={item.main_image}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?q=80&w=400&auto=format&fit=crop';
+                        }}
+                      />
+                    </div>
+                    <div className="space-y-1 flex-1 min-w-0">
                       <h4 className="font-bold text-slate-800 text-xs leading-snug group-hover:text-emerald-700 transition-colors line-clamp-2">
                         {item.title}
                       </h4>
-                      <p className="text-[10px] text-slate-400">{item.date}</p>
+                      <p className="text-[10px] font-medium text-slate-400">{formatShortDate(item.date)}</p>
                     </div>
                   </Link>
                 ))}

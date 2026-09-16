@@ -1,4 +1,4 @@
-import { CategoryData, LevelConfigData, NewsItem, ProjectItem, JournalItem, Facility } from '../types';
+import { CategoryData, LevelConfigData, NewsItem, ProjectItem, JournalItem, Facility, AboutData, SlideItemData, StatItemData } from '../types';
 import { MOCK_IAT_FACILITIES } from '../constants';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://lpialhidayah.or.id';
@@ -48,6 +48,125 @@ export const fetchLevelConfig = async (): Promise<LevelConfigData> => {
         type: 'Sekolah Tinggi Agama Islam'
       }
     };
+  }
+};
+
+/* ================= ABOUT DATA ================= */
+
+export const fetchAboutData = async (
+  jenjang: string = 'KAMPUS',
+  fakultas: string = DEFAULT_FAKULTAS,
+  jurusan: string = DEFAULT_JURUSAN
+): Promise<AboutData> => {
+  // Parse fallback from .env
+  const fallbackVisi = import.meta.env.VITE_ABOUT_VISI || "Menjadi Program Studi Ilmu Al-Qur'an dan Tafsir yang Unggul, Berakar pada Turats Islamiyah, dan Berdaya Saing Global dalam Pengembangan Keilmuan Al-Qur'an serta Pemberdayaan Masyarakat pada Tahun 2030.";
+  const fallbackHistory = import.meta.env.VITE_ABOUT_HISTORY || "Program Studi Ilmu Al-Qur'an dan Tafsir (IAT) didirikan di bawah naungan Fakultas Ushuluddin STAI Al-Mannan untuk menjawab kebutuhan umat akan lahirnya generasi yang memahami Al-Qur'an secara mendalam, moderat, dan berintelektual tinggi. Dengan perpaduan tradisi pesantren dan tradisi akademik universitas riset, IAT STAI Al-Mannan terus melahirkan lulusan bergelar S.Ag yang berkiprah luas di berbagai lini kehidupan umat dan bangsa.";
+  
+  let fallbackMisi: string[] = [
+    "Menyelenggarakan pendidikan dan pengajaran Ilmu Al-Qur'an dan Tafsir berkualitas tinggi berbasis integrasi turats dan metodologi modern.",
+    "Mengembangkan riset inovatif dalam bidang studi naskah tafsir nusantara, living Qur'an, dan digital quranic studies.",
+    "Melaksanakan pengabdian kepada masyarakat melalui pembinaan tahfidz, dakwah Al-Qur'an, dan literasi keislaman.",
+    "Menjalin kemitraan strategis dengan perguruan tinggi Islam, pusat riset Al-Qur'an nasional dan internasional."
+  ];
+  try {
+    const parsedMisi = import.meta.env.VITE_ABOUT_MISI;
+    if (parsedMisi) fallbackMisi = JSON.parse(parsedMisi);
+  } catch {}
+
+  let fallbackStruktur = {
+    pimpinan: "Ketua Program Studi (Kaprodi)",
+    nama: "Dr. H. Muhammad Arifin, M.Ag., Al-Hafizh",
+    staff: [
+      { role: "Sekretaris Prodi", name: "Ust. Ahmad Fauzan, M.Hum" },
+      { role: "Ketua Lab Al-Qur'an", name: "Ust. H. Ridwan Kamil, Lc., M.Ag" },
+      { role: "Koordinator Tahfidz & Sanad", name: "Usth. Hj. Nurul Hidayah, M.Pd., Al-Hafizhah" },
+      { role: "Gugus Penjamin Mutu", name: "Dr. Siti Fatimah, M.Ag" }
+    ]
+  };
+  try {
+    const parsedStruktur = import.meta.env.VITE_ABOUT_STRUKTUR;
+    if (parsedStruktur) fallbackStruktur = JSON.parse(parsedStruktur);
+  } catch {}
+
+  const fallbackData: AboutData = {
+    visi: fallbackVisi,
+    history: fallbackHistory,
+    misi: fallbackMisi,
+    struktur: fallbackStruktur
+  };
+
+  try {
+    const url = `${API_BASE_URL}/about/${jenjang}?fakultas=${encodeURIComponent(fakultas)}&jurusan=${encodeURIComponent(jurusan)}`;
+    const json = await fetchJson<{ data: AboutData }>(url, 'Gagal mengambil data Tentang Kami');
+    if (json.data && (json.data.visi || json.data.history)) {
+      return {
+        visi: json.data.visi || fallbackVisi,
+        history: json.data.history || fallbackHistory,
+        misi: json.data.misi && json.data.misi.length > 0 ? json.data.misi : fallbackMisi,
+        struktur: json.data.struktur && json.data.struktur.pimpinan ? json.data.struktur : fallbackStruktur
+      };
+    }
+    return fallbackData;
+  } catch (e) {
+    return fallbackData;
+  }
+};
+
+/* ================= HOME SLIDES & STATS ================= */
+
+export const fetchHomeSlides = async (): Promise<SlideItemData[]> => {
+  let fallbackSlides: SlideItemData[] = [
+    {
+      image: '/gedungdepan.jpg',
+      title: "Program Studi Ilmu Al-Qur'an & Tafsir",
+      subtitle: "Mencetak Mufassir Muda Berakhlak Qurani, Kritis, dan Berwawasan Global"
+    },
+    {
+      image: '/slide2.jpg',
+      title: "Integrasi Turats & Sains Modern",
+      subtitle: "Kajian Tafsir Klasik, Living Qur'an, hingga Digital Quranic Studies"
+    },
+    {
+      image: '/slide1.jpg',
+      title: "Program Unggulan Tahfidz & Sanad Qira'at",
+      subtitle: "Bimbingan Intensif Bersanad dengan Para Masyayikh & Ulama Al-Qur'an"
+    }
+  ];
+
+  try {
+    const envSlides = import.meta.env.VITE_HOME_SLIDES;
+    if (envSlides) fallbackSlides = JSON.parse(envSlides);
+  } catch {}
+
+  try {
+    const json = await fetchJson<{ slides: SlideItemData[] }>(`${API_BASE_URL}/home`, 'Gagal mengambil slides home');
+    if (json.slides && json.slides.length > 0) return json.slides;
+    return fallbackSlides;
+  } catch {
+    return fallbackSlides;
+  }
+};
+
+export const fetchHomeStats = async (): Promise<StatItemData[]> => {
+  let fallbackStats: StatItemData[] = [
+    { label: "Mahasiswa Aktif", value: "350+" },
+    { label: "Dosen Ahli & Mufassir", value: "24" },
+    { label: "Hafizh/Hafizhah 30 Juz", value: "85%" },
+    { label: "Alumni Berdaya Saing", value: "1.200+" }
+  ];
+
+  try {
+    const envStats = import.meta.env.VITE_HOME_STATS;
+    if (envStats) fallbackStats = JSON.parse(envStats);
+  } catch {}
+
+  try {
+    const json = await fetchJson<{ stats: Record<string, StatItemData[]> }>(`${API_BASE_URL}/home`, 'Gagal mengambil stats home');
+    if (json.stats && json.stats['IAT']) return json.stats['IAT'];
+    if (json.stats && json.stats['KAMPUS']) return json.stats['KAMPUS'];
+    return fallbackStats;
+  } catch {
+    return fallbackStats;
   }
 };
 
