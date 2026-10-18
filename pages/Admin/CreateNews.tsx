@@ -13,7 +13,7 @@ import {
   Sparkles,
   Wand2,
   CheckCircle
-} from 'lucide-react';
+, Eye, X, ExternalLink } from 'lucide-react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { createNews, fetchNewsCategories } from '../../services/api';
@@ -54,6 +54,7 @@ const CreateNews: React.FC = () => {
   const [content, setContent] = useState('');
   const [mainImage, setMainImage] = useState<File | null>(null);
   const [gallery, setGallery] = useState<File[]>([]);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [briefSketch, setBriefSketch] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -264,7 +265,7 @@ const CreateNews: React.FC = () => {
             rows={2}
             placeholder="Ringkasan 1-2 kalimat untuk preview..."
             value={excerpt}
-            onChange={(e) => setExcerpt(stripHtml(e.target.value))}
+            onChange={(e) => setExcerpt(e.target.value)}
             className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-emerald-700"
           />
         </div>
@@ -424,6 +425,50 @@ const CreateNews: React.FC = () => {
           </div>
         </div>
       </div>
+      {/* Lightbox Image Preview Modal */}
+      {previewImage && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div 
+            className="relative max-w-4xl max-h-[92vh] bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-white/20 p-3 flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex justify-between items-center px-4 py-2 border-b border-white/10 text-white mb-2">
+              <span className="text-xs font-bold text-slate-300 flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-emerald-400" /> Pratinjau Foto Penuh
+              </span>
+              <div className="flex items-center gap-2">
+                <a
+                  href={previewImage}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 hover:bg-white/10 rounded-xl text-slate-300 hover:text-white transition-colors flex items-center gap-1.5 text-xs font-bold"
+                  title="Buka ukuran asli di tab baru"
+                >
+                  <ExternalLink className="w-4 h-4" /> Buka Ukuran Asli
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewImage(null)}
+                  className="p-2 hover:bg-white/10 rounded-xl text-slate-300 hover:text-white transition-colors"
+                  title="Tutup"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="overflow-auto max-h-[80vh] w-full flex items-center justify-center p-2">
+              <img
+                src={previewImage}
+                alt="Preview Foto"
+                className="max-h-[75vh] max-w-full rounded-2xl object-contain shadow-2xl"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
