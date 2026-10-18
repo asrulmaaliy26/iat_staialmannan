@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 
-const apiKey = import.meta.env.GEMINI_API_KEY || '';
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY || '';
 
 let aiClient: GoogleGenAI | null = null;
 if (apiKey && apiKey !== 'PLACEHOLDER_API_KEY') {
