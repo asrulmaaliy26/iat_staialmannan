@@ -210,11 +210,19 @@ const NewsDetail: React.FC = () => {
                 </div>
               </div>
 
-              {/* 4. Main Image Container (Dokumentasi jelas tanpa ketutupan, views di dalam gambar) */}
+              {/* 4. Main Image Container (Full tanpa terpotong, views di dalam gambar) */}
               <div 
-                className="relative rounded-2xl overflow-hidden aspect-video bg-slate-900 shadow-md group cursor-pointer"
+                className="relative rounded-2xl overflow-hidden bg-slate-950 shadow-md group cursor-pointer flex items-center justify-center min-h-[260px]"
                 onClick={() => setSelectedImage(news.main_image || '/gedungdepan.jpg')}
               >
+                {/* Ambient blurred background layer so non-16:9 images blend seamlessly */}
+                <img
+                  src={news.main_image || '/gedungdepan.jpg'}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-35 scale-110 pointer-events-none"
+                />
+
                 {!imgLoaded && (
                   <div className="absolute inset-0 bg-slate-200 animate-pulse flex items-center justify-center z-10">
                     <div className="w-10 h-10 border-4 border-slate-300 border-t-emerald-700 rounded-full animate-spin"></div>
@@ -223,12 +231,12 @@ const NewsDetail: React.FC = () => {
                 <img
                   src={news.main_image || '/gedungdepan.jpg'}
                   alt={news.title}
-                  className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-500 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+                  className={`relative z-10 w-full h-auto max-h-[750px] object-contain mx-auto block transition-all duration-500 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
                   onLoad={() => setImgLoaded(true)}
                 />
 
                 {/* Ambient overlay */}
-                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors pointer-events-none"></div>
+                <div className="absolute inset-0 z-10 bg-black/5 group-hover:bg-black/15 transition-colors pointer-events-none"></div>
 
                 {/* Floating Views Badge inside image */}
                 <div className="absolute top-4 right-4 z-20 pointer-events-none">
@@ -239,7 +247,7 @@ const NewsDetail: React.FC = () => {
                 </div>
 
                 {/* Zoom hover indicator */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
                   <div className="bg-black/50 backdrop-blur-md p-3 rounded-full opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition-all duration-300 border border-white/30 hidden md:flex items-center gap-2 text-white text-xs font-semibold px-4 shadow-xl">
                     <ZoomIn className="text-white w-4 h-4" />
                     <span>Klik untuk memperbesar</span>

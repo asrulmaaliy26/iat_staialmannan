@@ -99,11 +99,17 @@ const ProjectDetail: React.FC = () => {
               </div>
 
               {/* Main Image */}
-              <div className="rounded-2xl overflow-hidden aspect-video bg-slate-900">
+              <div className="rounded-2xl overflow-hidden bg-slate-950 relative min-h-[260px] flex items-center justify-center">
+                <img
+                  src={project.imageUrl || '/gedung.jpg'}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-35 scale-110 pointer-events-none"
+                />
                 <img
                   src={project.imageUrl || '/gedung.jpg'}
                   alt={project.title}
-                  className="w-full h-full object-cover"
+                  className="relative z-10 w-full h-auto max-h-[750px] object-contain mx-auto block"
                 />
               </div>
 

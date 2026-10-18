@@ -10,12 +10,37 @@ import {
   Plus,
   Trash2,
   Layers,
-  Sparkles
+  Sparkles,
+  Wand2,
+  CheckCircle
 } from 'lucide-react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { createNews, fetchNewsCategories } from '../../services/api';
+import { generateNewsArticle } from '../../services/gemini';
 import { useToast } from '../../components/ToastProvider';
+
+// Helper to strip HTML tags and decode entities into plain text
+const stripHtml = (html?: string) => {
+  if (!html) return '';
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#[0-9]+;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+// Helper to extract clean excerpt from content body (skips first heading)
+const extractCleanExcerpt = (contentHtml?: string) => {
+  if (!contentHtml) return '';
+  const contentWithoutHeading = contentHtml.replace(/^<h[1-6][^>]*>.*?<\/h[1-6]>/is, '');
+  const plainText = stripHtml(contentWithoutHeading || contentHtml);
+  return plainText.substring(0, 160).trim() + (plainText.length > 160 ? '...' : '');
+};
 
 const CreateNews: React.FC = () => {
   const navigate = useNavigate();
@@ -29,6 +54,48 @@ const CreateNews: React.FC = () => {
   const [content, setContent] = useState('');
   const [mainImage, setMainImage] = useState<File | null>(null);
   const [gallery, setGallery] = useState<File[]>([]);
+  const [briefSketch, setBriefSketch] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleSmartAIWrite = async () => {
+    setIsGenerating(true);
+    try {
+      const validImages = [mainImage, ...gallery].filter(
+        (img): img is File => !!img && img instanceof File
+      );
+      const generatedHtml = await generateNewsArticle({
+        briefDescription: briefSketch.trim() || undefined,
+        title: title.trim() || undefined,
+        category: category || undefined,
+        excerpt: excerpt.trim() || undefined,
+        jenjang: 'KAMPUS',
+        jurusan: "Ilmu Al-Qur'an dan Tafsir (IAT)",
+        fakultas: 'Ushuluddin',
+        images: validImages
+      });
+
+      if (generatedHtml) {
+        setContent(generatedHtml);
+        // Auto-extract title if title is empty
+        if (!title.trim()) {
+          const titleMatch = generatedHtml.match(/<h[1-3][^>]*>(.*?)<\/h[1-3]>/i);
+          if (titleMatch && titleMatch[1]) {
+            setTitle(stripHtml(titleMatch[1]));
+          }
+        }
+        // Auto-extract clean excerpt if empty
+        if (!excerpt.trim()) {
+          setExcerpt(extractCleanExcerpt(generatedHtml));
+        }
+        toast.success('Artikel berhasil dibuat dengan AI!');
+      }
+    } catch (error) {
+      console.error('Error generating AI news:', error);
+      toast.error('Gagal membuat artikel dengan AI.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -79,14 +146,7 @@ const CreateNews: React.FC = () => {
       return;
     }
 
-    let finalExcerpt = excerpt.trim();
-    if (!finalExcerpt) {
-      const strippedContent = content
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-      finalExcerpt = strippedContent.substring(0, 160) + '...';
-    }
+    let finalExcerpt = stripHtml(excerpt) || extractCleanExcerpt(content);
 
     setIsSubmitting(true);
     try {
@@ -178,14 +238,33 @@ const CreateNews: React.FC = () => {
         </div>
 
         <div>
-          <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">
-            Ringkasan Singkat (Excerpt)
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+              Ringkasan Singkat (Excerpt)
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                const sourceText = content || excerpt;
+                if (!sourceText.trim()) {
+                  toast.warning("Konten masih kosong.");
+                  return;
+                }
+                setExcerpt(extractCleanExcerpt(sourceText));
+                toast.success("Ringkasan berhasil dibersihkan / diekstrak!");
+              }}
+              className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1.5 transition-colors bg-emerald-50 hover:bg-emerald-100 px-3 py-1 rounded-xl border border-emerald-200 shadow-sm"
+              title="Bersihkan tag HTML dan ekstrak ringkasan dari konten"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Bersihkan / Ekstrak dari Konten
+            </button>
+          </div>
           <textarea
             rows={2}
             placeholder="Ringkasan 1-2 kalimat untuk preview..."
             value={excerpt}
-            onChange={(e) => setExcerpt(e.target.value)}
+            onChange={(e) => setExcerpt(stripHtml(e.target.value))}
             className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-emerald-700"
           />
         </div>
@@ -256,6 +335,79 @@ const CreateNews: React.FC = () => {
             ))}
           </div>
         </div>
+
+        {/* Multimodal AI News Assistant Card */}
+        <section className="bg-emerald-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-emerald-800/60">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-black flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-400 animate-pulse" /> AI News Assistant (Multimodal)
+            </h3>
+            <span className="text-[10px] bg-white/10 text-amber-300 font-bold px-3 py-1 rounded-full border border-white/10 uppercase tracking-widest">
+              Gemini Vision AI
+            </span>
+          </div>
+
+          <p className="text-xs text-emerald-200/80 mb-5 leading-relaxed">
+            AI otomatis membaca <strong>semua foto yang diunggah</strong>, judul, ringkasan, dan kategori sebagai <em>base prompt</em>.
+          </p>
+
+          {/* Base Prompt Status Indicator */}
+          <div className="bg-black/30 rounded-2xl p-4 mb-5 border border-white/10 space-y-2 text-xs">
+            <p className="font-bold text-amber-300 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+              <CheckCircle className="w-3.5 h-3.5" /> Konteks Dasar (Base Prompt)
+            </p>
+            <div className="space-y-1 text-slate-200">
+              <p className="truncate"><span className="text-white/60">Judul:</span> {title.trim() ? title : <span className="text-white/40 italic">Otomatis dibuat dari AI</span>}</p>
+              <p><span className="text-white/60">Kategori:</span> <span className="font-semibold text-emerald-300">{category || 'Kajian Tafsir'}</span></p>
+              <p className="flex items-center gap-2">
+                <span className="text-white/60">Foto Terdeteksi:</span>
+                <span className={`px-2 py-0.5 rounded-md font-bold text-[11px] ${
+                  (mainImage ? 1 : 0) + gallery.filter(Boolean).length > 0
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    : 'bg-white/10 text-white/50'
+                }`}>
+                  📷 {(mainImage ? 1 : 0) + gallery.filter(Boolean).length} foto siap dianalisis
+                </span>
+              </p>
+              {excerpt.trim() && (
+                <p className="line-clamp-2 text-white/70 italic text-[11px]">
+                  "{excerpt}"
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Additional Prompt Input */}
+          <label className="text-xs font-bold text-slate-300 block mb-2">
+            Poin / Instruksi Tambahan (Opsional)
+          </label>
+          <textarea
+            rows={3}
+            className="w-full bg-white/5 border border-white/10 rounded-2xl p-3.5 text-xs sm:text-sm text-white placeholder-white/40 outline-none focus:ring-2 focus:ring-amber-400 mb-4"
+            placeholder="Tambahkan poin khusus jika ada (contoh: 'Tekankan pesan dari Dekan Fakultas Ushuluddin', 'Sebutkan pembicara utama...'). Jika kosong, AI akan langsung menganalisis foto dan data di atas..."
+            value={briefSketch}
+            onChange={(e) => setBriefSketch(e.target.value)}
+          ></textarea>
+
+          <button
+            type="button"
+            onClick={handleSmartAIWrite}
+            disabled={isGenerating}
+            className="w-full bg-amber-400 text-emerald-950 font-black py-3.5 rounded-2xl flex items-center justify-center gap-2 hover:bg-amber-300 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 text-xs sm:text-sm"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-emerald-950" />
+                <span>AI Menganalisis Foto & Menulis...</span>
+              </>
+            ) : (
+              <>
+                <Wand2 className="w-4 h-4 text-emerald-950" />
+                <span>Buat Berita dengan AI</span>
+              </>
+            )}
+          </button>
+        </section>
 
         {/* Content Editor */}
         <div>
